@@ -31,11 +31,17 @@ namespace MirageDev.Mirage
 			vertices.Add(pos.X);
 			vertices.Add(pos.Y);
 			vertices.Add(pos.Z);
-			vertices.Add(0);
-			vertices.Add(0);
-			vertices.Add(0);
-			vertices.Add(0);
-			vertices.Add(0);
+			vertices.Add(0);  // uv X
+			vertices.Add(0);  // uv Y
+			vertices.Add(0);  // normal X
+			vertices.Add(0);  // normal Y
+			vertices.Add(0);  // normal Z
+			vertices.Add(0);  // tangent X
+			vertices.Add(0);  // tangent Y
+			vertices.Add(0);  // tangent Z
+			vertices.Add(0);  // bitangent X
+			vertices.Add(0);  // bitangent Y
+			vertices.Add(0);  // bitangent Z
 			m_Vertices.Add(pos);
 		}
 
@@ -44,11 +50,17 @@ namespace MirageDev.Mirage
 			vertices.Add(pos.X);
 			vertices.Add(pos.Y);
 			vertices.Add(pos.Z);
-			vertices.Add(uv.X);
-			vertices.Add(uv.Y);
-			vertices.Add(0);
-			vertices.Add(0);
-			vertices.Add(0);
+			vertices.Add(uv.X);  // uv X
+			vertices.Add(uv.Y);  // uv Y
+			vertices.Add(0);  // normal X
+			vertices.Add(0);  // normal Y
+			vertices.Add(0);  // normal Z
+			vertices.Add(0);  // tangent X
+			vertices.Add(0);  // tangent Y
+			vertices.Add(0);  // tangent Z
+			vertices.Add(0);  // bitangent X
+			vertices.Add(0);  // bitangent Y
+			vertices.Add(0);  // bitangent Z
 			m_Vertices.Add(pos);
 		}
 
@@ -57,11 +69,36 @@ namespace MirageDev.Mirage
 			vertices.Add(pos.X);
 			vertices.Add(pos.Y);
 			vertices.Add(pos.Z);
-			vertices.Add(uv.X);
-			vertices.Add(uv.Y);
-			vertices.Add(normal.X);
-			vertices.Add(normal.Y);
-			vertices.Add(normal.Z);
+			vertices.Add(uv.X);  // uv X
+			vertices.Add(uv.Y);  // uv Y
+			vertices.Add(normal.X);  // normal X
+			vertices.Add(normal.Y);  // normal Y
+			vertices.Add(normal.Z);  // normal Z
+			vertices.Add(0);  // tangent X
+			vertices.Add(0);  // tangent Y
+			vertices.Add(0);  // tangent Z
+			vertices.Add(0);  // bitangent X
+			vertices.Add(0);  // bitangent Y
+			vertices.Add(0);  // bitangent Z
+			m_Vertices.Add(pos);
+		}
+
+		public void AddVertex(Vector3 pos, Vector2 uv, Vector3 normal, Vector3 tangent, Vector3 bitangent)
+		{
+			vertices.Add(pos.X);
+			vertices.Add(pos.Y);
+			vertices.Add(pos.Z);
+			vertices.Add(uv.X);  // uv X
+			vertices.Add(uv.Y);  // uv Y
+			vertices.Add(normal.X);  // normal X
+			vertices.Add(normal.Y);  // normal Y
+			vertices.Add(normal.Z);  // normal Z
+			vertices.Add(tangent.X);  // tangent X
+			vertices.Add(tangent.Y);  // tangent Y
+			vertices.Add(tangent.Z);  // tangent Z
+			vertices.Add(bitangent.X);  // bitangent X
+			vertices.Add(bitangent.Y);  // bitangent Y
+			vertices.Add(bitangent.Z);  // bitangent Z
 			m_Vertices.Add(pos);
 		}
 
@@ -82,6 +119,7 @@ namespace MirageDev.Mirage
 
 		public void RecalculateNormals()
 		{
+			// calculate normals
 			foreach (var tri in m_Triangles)
 			{
 				Vector3 A = m_Vertices[tri[0]];
@@ -89,15 +127,68 @@ namespace MirageDev.Mirage
 				Vector3 C = m_Vertices[tri[2]];
 
 				Vector3 normal = ComputeFaceNormal(A, B, C).Normalized();
-				vertices[tri[0] * 8 + 5] = normal.X;
-				vertices[tri[0] * 8 + 6] = normal.Y;
-				vertices[tri[0] * 8 + 7] = normal.Z;
-				vertices[tri[1] * 8 + 5] = normal.X;
-				vertices[tri[1] * 8 + 6] = normal.Y;
-				vertices[tri[1] * 8 + 7] = normal.Z;
-				vertices[tri[2] * 8 + 5] = normal.X;
-				vertices[tri[2] * 8 + 6] = normal.Y;
-				vertices[tri[2] * 8 + 7] = normal.Z;
+				vertices[tri[0] * 14 + 5] = normal.X;
+				vertices[tri[0] * 14 + 6] = normal.Y;
+				vertices[tri[0] * 14 + 7] = normal.Z;
+				vertices[tri[1] * 14 + 5] = normal.X;
+				vertices[tri[1] * 14 + 6] = normal.Y;
+				vertices[tri[1] * 14 + 7] = normal.Z;
+				vertices[tri[2] * 14 + 5] = normal.X;
+				vertices[tri[2] * 14 + 6] = normal.Y;
+				vertices[tri[2] * 14 + 7] = normal.Z;
+			}
+		}
+
+		public void RecalculateTangents()
+		{
+			// calculate tangents and bitangents
+			foreach (var tri in m_Triangles)
+			{
+				Vector3 pos1 = m_Vertices[tri[0]];
+				Vector3 pos2 = m_Vertices[tri[1]];
+				Vector3 pos3 = m_Vertices[tri[2]];
+				Vector2 uv1 = new(vertices[tri[0] * 14 + 3], vertices[tri[0] * 14 + 4]);
+				Vector2 uv2 = new(vertices[tri[1] * 14 + 3], vertices[tri[1] * 14 + 4]);
+				Vector2 uv3 = new(vertices[tri[2] * 14 + 3], vertices[tri[2] * 14 + 4]);
+
+				Vector3 edge1 = pos2 - pos1;
+				Vector3 edge2 = pos3 - pos1;
+				Vector2 deltaUV1 = uv2 - uv1;
+				Vector2 deltaUV2 = uv3 - uv1;
+
+				float f = 1.0f / (deltaUV1.X * deltaUV2.Y - deltaUV2.X * deltaUV1.Y);
+				Vector3 tangent1 = new();
+				Vector3 bitangent1 = new();
+
+				tangent1.X = f * (deltaUV2.Y * edge1.X - deltaUV1.Y * edge2.X);
+				tangent1.Y = f * (deltaUV2.Y * edge1.Y - deltaUV1.Y * edge2.Y);
+				tangent1.Z = f * (deltaUV2.Y * edge1.Z - deltaUV1.Y * edge2.Z);
+
+				bitangent1.X = f * (-deltaUV2.X * edge1.X + deltaUV1.X * edge2.X);
+				bitangent1.Y = f * (-deltaUV2.X * edge1.Y + deltaUV1.X * edge2.Y);
+				bitangent1.Z = f * (-deltaUV2.X * edge1.Z + deltaUV1.X * edge2.Z);
+
+				vertices[tri[0] * 14 + 8] = tangent1.X;
+				vertices[tri[0] * 14 + 9] = tangent1.Y;
+				vertices[tri[0] * 14 + 10] = tangent1.Z;
+				vertices[tri[0] * 14 + 11] = bitangent1.X;
+				vertices[tri[0] * 14 + 12] = bitangent1.Y;
+				vertices[tri[0] * 14 + 13] = bitangent1.Z;
+
+				vertices[tri[1] * 14 + 8] = tangent1.X;
+				vertices[tri[1] * 14 + 9] = tangent1.Y;
+				vertices[tri[1] * 14 + 10] = tangent1.Z;
+				vertices[tri[1] * 14 + 11] = bitangent1.X;
+				vertices[tri[1] * 14 + 12] = bitangent1.Y;
+				vertices[tri[1] * 14 + 13] = bitangent1.Z;
+
+				vertices[tri[2] * 14 + 8] = tangent1.X;
+				vertices[tri[2] * 14 + 9] = tangent1.Y;
+				vertices[tri[2] * 14 + 10] = tangent1.Z;
+				vertices[tri[2] * 14 + 11] = bitangent1.X;
+				vertices[tri[2] * 14 + 12] = bitangent1.Y;
+				vertices[tri[2] * 14 + 13] = bitangent1.Z;
+
 			}
 		}
 	}
@@ -173,12 +264,21 @@ namespace MirageDev.Mirage
 		{
 			VertexArrayObject = GL.GenVertexArray();
 			GL.BindVertexArray(VertexArrayObject);
-			GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 8 * sizeof(float), 0);
+			// position
+			GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 14 * sizeof(float), 0);
 			GL.EnableVertexAttribArray(0);
-			GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 8 * sizeof(float), 3 * sizeof(float));
+			// uv
+			GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 14 * sizeof(float), 3 * sizeof(float));
 			GL.EnableVertexAttribArray(1);
-			GL.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, false, 8 * sizeof(float), 5 * sizeof(float));
+			// normal
+			GL.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, false, 14 * sizeof(float), 5 * sizeof(float));
 			GL.EnableVertexAttribArray(2);
+			// tangent
+			GL.VertexAttribPointer(3, 3, VertexAttribPointerType.Float, false, 14 * sizeof(float), 8 * sizeof(float));
+			GL.EnableVertexAttribArray(3);
+			// bitangent
+			GL.VertexAttribPointer(4, 3, VertexAttribPointerType.Float, false, 14 * sizeof(float), 11 * sizeof(float));
+			GL.EnableVertexAttribArray(4);
 		}
 
 		public void GenEBO()
@@ -418,6 +518,7 @@ namespace MirageDev.Mirage
 			base.OnLoad();
 
 			GL.Enable(EnableCap.DepthTest);
+			GL.Enable(EnableCap.Blend);
 
 			CursorState = settings.cursorState;
 			GL.ClearColor(settings.clearColor);
@@ -449,6 +550,7 @@ namespace MirageDev.Mirage
 			lastPos = new(mouse.X, mouse.Y);
 			camera.yaw += deltaX * mouseSensitivity;
 			camera.pitch += -deltaY * mouseSensitivity;
+			camera.pitch = Math.Clamp(camera.pitch, -90, 90);
 
 			if (input.IsKeyDown(Keys.W))
 			{

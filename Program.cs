@@ -17,11 +17,13 @@ namespace MirageDev.Mirage
 
 		MirageObject worldObject;
 		MirageObject waterObject;
+		MirageObject sunObject;
 		Scene scene = new();
 
 		Texture sandTex;
 		Texture grassTex;
 		Texture waterTex;
+		Texture waterNormalTex;
 
 		int Xsize = 640;
 		int Zsize = 640;
@@ -90,6 +92,7 @@ namespace MirageDev.Mirage
 				vert++;
 			}
 			worldMesh.RecalculateNormals();
+			worldMesh.RecalculateTangents();
 
 			return worldMesh;
 		}
@@ -99,9 +102,10 @@ namespace MirageDev.Mirage
 			sandTex = new("../../../textures/sand.png");
 			grassTex = new("../../../textures/grass.png");
 			waterTex = new("../../../textures/water.jpg");
+			waterNormalTex = new("../../../textures/waterNormal.jpg");
 
+			// Load world
 			Mesh worldMesh = CreateWorld();
-
 			Shader worldShader = new("../../../shaders/shader.vert", "../../../shaders/experiments/terrain.frag");
 			worldShader.SetInt("sandTex", 0);
 			worldShader.SetInt("grassTex", 1);
@@ -109,17 +113,24 @@ namespace MirageDev.Mirage
 
 			// Load water
 			Shader waterShader = new("../../../shaders/experiments/water.vert", "../../../shaders/experiments/water.frag");
-			//waterShader.SetVector3("color", new(121f / 255f, 193f / 255f, 222f / 255f));
 			waterShader.SetInt("tex", 2);
-			waterShader.SetFloat("shininess", 256f);
-			waterShader.SetInt("normalMap", 0);
+			waterShader.SetInt("normalTex", 3);
+			waterShader.SetFloat("shininess", 512f);
 			waterObject = new(new ObjLoader("../../../models/Plane.obj"), waterShader);
 			waterObject.scale = new(32f, 1f, 32f);
 			waterObject.position = new(32f, 0f, 32f);
+			waterObject.mesh.RecalculateTangents();
+
+			// Load sun
+			Shader sunShader = new("../../../shaders/shader.vert", "../../../shaders/unlit/solidColor.frag");
+			sunShader.SetVector3("color", new(1f));
+			sunObject = new(new ObjLoader("../../../models/Sphere.obj"), sunShader);
+			sunObject.scale = new(2f);
 
 			// Setup scene
 			scene.Add(worldObject);
 			scene.Add(waterObject);
+			scene.Add(sunObject);
 			scene.SetDirectional(new()
 			{
 				direction = new(-0.2f, -1.0f, -0.3f),
@@ -127,6 +138,7 @@ namespace MirageDev.Mirage
 				diffuse = new(1f),
 				specular = new(1f)
 			});
+			sunObject.position = new Vector3(32f, 0f, 32f) + -scene.directionalLight.direction * 10f;
 
 			projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(60.0f), (float)renderer.Size.X / (float)renderer.Size.Y, 0.1f, 1000.0f);
 
@@ -155,6 +167,7 @@ namespace MirageDev.Mirage
 			sandTex.Use(TextureUnit.Texture0);
 			grassTex.Use(TextureUnit.Texture1);
 			waterTex.Use(TextureUnit.Texture2);
+			waterNormalTex.Use(TextureUnit.Texture3);
 			scene.SetMVP(view, projection);
 			scene.Render(renderer);
 		}

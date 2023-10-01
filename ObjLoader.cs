@@ -61,7 +61,13 @@ namespace MirageDev.Mirage
 							vertices.Add(normals[normalIndex].X);
 							vertices.Add(normals[normalIndex].Y);
 							vertices.Add(normals[normalIndex].Z);
-							tris.Add((uint)(vertices.Count / 8 - 1));
+							vertices.Add(0);  // TODO: Tangents and bitangents
+							vertices.Add(0);
+							vertices.Add(0);
+							vertices.Add(0);
+							vertices.Add(0);
+							vertices.Add(0);
+							tris.Add((uint)(vertices.Count / 14 - 1));
 						}
 					}
 				}

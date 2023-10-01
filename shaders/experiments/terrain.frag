@@ -15,6 +15,7 @@ out vec4 FragColor;
 
 uniform sampler2D sandTex;
 uniform sampler2D grassTex;
+
 uniform DirectionalLight directionalLight;
 
 void main()
@@ -23,7 +24,7 @@ void main()
     vec3 lightDir = normalize(-directionalLight.direction); 
     vec3 diff = max(dot(norm, lightDir), 0.0) * directionalLight.diffuse;
 
-    vec4 groundColor = mix(texture(sandTex, TexCoord), texture(grassTex, TexCoord), FragPos.y + 0.3f);
+    vec4 groundColor = mix(texture(sandTex, TexCoord), texture(grassTex, TexCoord), FragPos.y);
     vec4 lightAmount = groundColor * vec4(diff, 1.0);
     FragColor = vec4(lightAmount.xyz, 1.0);
 }
