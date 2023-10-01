@@ -15,26 +15,46 @@ namespace MirageDev.Mirage
 
 		Matrix4 view, projection;
 
-		MirageObject ballObject;
 		MirageObject worldObject;
 		MirageObject waterObject;
 		Scene scene = new();
+
+		Texture sandTex;
+		Texture grassTex;
+		Texture waterTex;
 
 		int Xsize = 640;
 		int Zsize = 640;
 		float resolution = 0.1f;
 		double perlinFrequency = 50;
+		double flatFrequency = 200;
+		float perlinOffset = 0f;
 		int perlinOctaves = 4;
 		Perlin perlin = new();
 
 		Stopwatch timer = new();
 
-		void Load()
+		Mesh CreateWorld()
 		{
-			// Load monkey
-			Shader shader = new("../../../shaders/experiments/timeWarp.vert", "../../../shaders/experiments/uvmap.frag");
-			ballObject = new(new ObjLoader("../../../models/Monkey.obj"), shader);
-			ballObject.scale = new(1f, 1f, 1f);
+			// Create river map
+			float[,] riverMap = new float[Xsize, Zsize];
+			for (int x = 0; x < Xsize; x++)
+			{
+				for (int z = 0; z < Zsize; z++)
+				{
+					riverMap[x, z] = Math.Abs((float)perlin.Noise(x / 100f + perlinOffset, 0.5d, z / 100f + perlinOffset)) < 0.02f ? 1f : 0f;
+				}
+			}
+
+			// Create continent map
+			float[,] biomeMap = new float[Xsize, Zsize];
+			for (int x = 0; x < Xsize; x++)
+			{
+				for (int z = 0; z < Zsize; z++)
+				{
+					biomeMap[x, z] = (float)perlin.Noise(x / flatFrequency + perlinOffset, 0.5d, z / flatFrequency + perlinOffset);
+				}
+			}
 
 			// Create world
 			Mesh worldMesh = new();
@@ -43,10 +63,16 @@ namespace MirageDev.Mirage
 			{
 				for (int z = 0; z < Zsize; z++)
 				{
-					float height = (float)perlin.NoiseOctaves(x / perlinFrequency, 0.5d, z / perlinFrequency, numOctaves: perlinOctaves);
+					float height = (float)perlin.NoiseOctaves(x / perlinFrequency + perlinOffset, 0.5d, z / perlinFrequency + perlinOffset, numOctaves: perlinOctaves) * 1.2f;
+					if (biomeMap[x, z] > 0)
+					{
+						// flatten
+						height += biomeMap[x, z] * 2f;
+					}
+
 					worldMesh.AddVertex(
-						new(x * resolution, height * 2f, z * resolution), 
-						new(x / (float)Xsize, z / (float)Zsize)
+						new(x * resolution, height * 2f, z * resolution),
+						new((float)x / (float)Xsize * 100f, (float)z / (float)Zsize * 100f)
 					);
 					i++;
 				}
@@ -65,20 +91,33 @@ namespace MirageDev.Mirage
 			}
 			worldMesh.RecalculateNormals();
 
+			return worldMesh;
+		}
+
+		void Load()
+		{
+			sandTex = new("../../../textures/sand.png");
+			grassTex = new("../../../textures/grass.png");
+			waterTex = new("../../../textures/water.jpg");
+
+			Mesh worldMesh = CreateWorld();
+
 			Shader worldShader = new("../../../shaders/shader.vert", "../../../shaders/experiments/terrain.frag");
-			worldShader.SetVector3("sand", new(1f, 1f, 0.5f));
-			worldShader.SetVector3("grass", new(0.25f, 1f, 0.25f));
+			worldShader.SetInt("sandTex", 0);
+			worldShader.SetInt("grassTex", 1);
 			worldObject = new(worldMesh, worldShader);
 
 			// Load water
-			Shader waterShader = new("../../../shaders/shader.vert", "../../../shaders/lit/solidColor.frag");
-			waterShader.SetVector3("color", new(0.5f, 0.5f, 1f));
+			Shader waterShader = new("../../../shaders/experiments/water.vert", "../../../shaders/experiments/water.frag");
+			//waterShader.SetVector3("color", new(121f / 255f, 193f / 255f, 222f / 255f));
+			waterShader.SetInt("tex", 2);
+			waterShader.SetFloat("shininess", 256f);
+			waterShader.SetInt("normalMap", 0);
 			waterObject = new(new ObjLoader("../../../models/Plane.obj"), waterShader);
-			waterObject.scale = new(64f);
+			waterObject.scale = new(32f, 1f, 32f);
 			waterObject.position = new(32f, 0f, 32f);
 
 			// Setup scene
-			scene.Add(ballObject);
 			scene.Add(worldObject);
 			scene.Add(waterObject);
 			scene.SetDirectional(new()
@@ -89,7 +128,7 @@ namespace MirageDev.Mirage
 				specular = new(1f)
 			});
 
-			projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(60.0f), (float)renderer.Size.X / (float)renderer.Size.Y, 0.1f, 100.0f);
+			projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(60.0f), (float)renderer.Size.X / (float)renderer.Size.Y, 0.1f, 1000.0f);
 
 			timer.Start();
 		}
@@ -99,6 +138,9 @@ namespace MirageDev.Mirage
 			KeyboardState input = renderer.KeyboardState;
 
 			float t = (float)timer.Elapsed.TotalSeconds * 2f;
+			float x = (float)Math.Cos(t * 0.5f);
+			float y = (float)Math.Sin(t * 0.5f);
+			
 		}
 
 		void FrameRender(MirageRenderer renderer)
@@ -107,9 +149,12 @@ namespace MirageDev.Mirage
 
 			view = renderer.camera.CreateViewMatrix();
 			
-			ballObject.shader.SetVector3("viewPosition", renderer.camera.position);
-			ballObject.shader.SetFloat("time", (float)timer.Elapsed.TotalSeconds * 3);
+			waterObject.shader.SetFloat("time", (float)timer.Elapsed.TotalSeconds);
+			waterObject.shader.SetVector3("viewPos", renderer.camera.position);
 
+			sandTex.Use(TextureUnit.Texture0);
+			grassTex.Use(TextureUnit.Texture1);
+			waterTex.Use(TextureUnit.Texture2);
 			scene.SetMVP(view, projection);
 			scene.Render(renderer);
 		}

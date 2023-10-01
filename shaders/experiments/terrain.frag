@@ -10,10 +10,11 @@ struct DirectionalLight {
 
 in vec3 FragPos;
 in vec3 Normal;
+in vec2 TexCoord;
 out vec4 FragColor;
 
-uniform vec3 sand;
-uniform vec3 grass;
+uniform sampler2D sandTex;
+uniform sampler2D grassTex;
 uniform DirectionalLight directionalLight;
 
 void main()
@@ -22,7 +23,7 @@ void main()
     vec3 lightDir = normalize(-directionalLight.direction); 
     vec3 diff = max(dot(norm, lightDir), 0.0) * directionalLight.diffuse;
 
-    vec3 groundColor = mix(sand, grass, FragPos.y);
-    vec3 lightAmount = groundColor * diff;
-    FragColor = vec4(lightAmount, 1.0);
+    vec4 groundColor = mix(texture(sandTex, TexCoord), texture(grassTex, TexCoord), FragPos.y + 0.3f);
+    vec4 lightAmount = groundColor * vec4(diff, 1.0);
+    FragColor = vec4(lightAmount.xyz, 1.0);
 }

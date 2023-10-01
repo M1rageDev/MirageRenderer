@@ -99,14 +99,6 @@ namespace MirageDev.Mirage
 				vertices[tri[2] * 8 + 6] = normal.Y;
 				vertices[tri[2] * 8 + 7] = normal.Z;
 			}
-			Console.WriteLine(vertices[0]);
-			Console.WriteLine(vertices[1]);
-			Console.WriteLine(vertices[2]);
-			Console.WriteLine(vertices[3]);
-			Console.WriteLine(vertices[4]);
-			Console.WriteLine(vertices[5]);
-			Console.WriteLine(vertices[6]);
-			Console.WriteLine(vertices[7]);
 		}
 	}
 
@@ -429,6 +421,7 @@ namespace MirageDev.Mirage
 
 			CursorState = settings.cursorState;
 			GL.ClearColor(settings.clearColor);
+			GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
 			settings.onLoad();
 		}
