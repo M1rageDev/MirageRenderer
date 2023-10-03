@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using static OpenTK.Graphics.OpenGL.GL;
+using System.Drawing;
+using System.Reflection.Metadata;
 
 namespace MirageDev.Mirage
 {
@@ -15,6 +17,10 @@ namespace MirageDev.Mirage
 
 		Matrix4 view, projection;
 
+		MirageFrameBuffer screenFB;
+		Shader screenShader;
+		MirageScreenQuad screenQuad;
+
 		MirageObject worldObject;
 		MirageObject waterObject;
 		MirageObject sunObject;
@@ -23,7 +29,6 @@ namespace MirageDev.Mirage
 		Texture sandTex;
 		Texture grassTex;
 		Texture waterTex;
-		Texture waterNormalTex;
 
 		int Xsize = 640;
 		int Zsize = 640;
@@ -102,7 +107,13 @@ namespace MirageDev.Mirage
 			sandTex = new("../../../textures/sand.png");
 			grassTex = new("../../../textures/grass.png");
 			waterTex = new("../../../textures/water.jpg");
-			waterNormalTex = new("../../../textures/waterNormal.jpg");
+
+			// Load depth FBO and screen shader
+			screenFB = new(800, 600);
+			screenFB.BindBuffer(PixelInternalFormat.Rgba, PixelFormat.Rgba, PixelType.UnsignedByte, FramebufferAttachment.ColorAttachment0);
+			screenShader = new("../../../shaders/screen/basic.vert", "../../../shaders/screen/basic.frag");
+			screenShader.SetInt("screenTexture", 0);
+			screenQuad = new();
 
 			// Load world
 			Mesh worldMesh = CreateWorld();
@@ -149,27 +160,39 @@ namespace MirageDev.Mirage
 		{
 			KeyboardState input = renderer.KeyboardState;
 
-			float t = (float)timer.Elapsed.TotalSeconds * 2f;
-			float x = (float)Math.Cos(t * 0.5f);
-			float y = (float)Math.Sin(t * 0.5f);
-			
+			float t = (float)timer.Elapsed.TotalSeconds;
+
+			view = renderer.camera.CreateViewMatrix();
+			waterObject.shader.SetFloat("time", t);
+			waterObject.shader.SetVector3("viewPos", renderer.camera.position);
+			scene.SetMVP(view, projection);
 		}
 
 		void FrameRender(MirageRenderer renderer)
 		{
-			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
-			view = renderer.camera.CreateViewMatrix();
-			
-			waterObject.shader.SetFloat("time", (float)timer.Elapsed.TotalSeconds);
-			waterObject.shader.SetVector3("viewPos", renderer.camera.position);
-
 			sandTex.Use(TextureUnit.Texture0);
 			grassTex.Use(TextureUnit.Texture1);
 			waterTex.Use(TextureUnit.Texture2);
-			waterNormalTex.Use(TextureUnit.Texture3);
-			scene.SetMVP(view, projection);
+
+			// first pass (color)
+			GL.Enable(EnableCap.DepthTest);
+			GL.BindFramebuffer(FramebufferTarget.Framebuffer, screenFB.FrameBufferObject);
+			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 			scene.Render(renderer);
+
+			// second pass (depth)
+
+
+			// third pass (screen quad)
+			GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+			GL.Disable(EnableCap.DepthTest);
+			GL.Clear(ClearBufferMask.ColorBufferBit);
+			GL.ActiveTexture(TextureUnit.Texture0);
+			GL.BindTexture(TextureTarget.Texture2D, screenFB.TextureHandle[0]);
+			screenShader.Use();
+			screenQuad.Draw();
+
+			renderer.SwapBuffers();
 		}
 
 		void Unload()

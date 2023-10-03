@@ -3,6 +3,7 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using static OpenTK.Graphics.OpenGL.GL;
 
 namespace MirageDev.Mirage
 {
@@ -168,28 +169,190 @@ namespace MirageDev.Mirage
 				bitangent1.Y = f * (-deltaUV2.X * edge1.Y + deltaUV1.X * edge2.Y);
 				bitangent1.Z = f * (-deltaUV2.X * edge1.Z + deltaUV1.X * edge2.Z);
 
-				vertices[tri[0] * 14 + 8] = tangent1.X;
-				vertices[tri[0] * 14 + 9] = tangent1.Y;
+				vertices[tri[0] * 14 + 8]  = tangent1.X;
+				vertices[tri[0] * 14 + 9]  = tangent1.Y;
 				vertices[tri[0] * 14 + 10] = tangent1.Z;
 				vertices[tri[0] * 14 + 11] = bitangent1.X;
 				vertices[tri[0] * 14 + 12] = bitangent1.Y;
 				vertices[tri[0] * 14 + 13] = bitangent1.Z;
 
-				vertices[tri[1] * 14 + 8] = tangent1.X;
-				vertices[tri[1] * 14 + 9] = tangent1.Y;
+				vertices[tri[1] * 14 + 8]  = tangent1.X;
+				vertices[tri[1] * 14 + 9]  = tangent1.Y;
 				vertices[tri[1] * 14 + 10] = tangent1.Z;
 				vertices[tri[1] * 14 + 11] = bitangent1.X;
 				vertices[tri[1] * 14 + 12] = bitangent1.Y;
 				vertices[tri[1] * 14 + 13] = bitangent1.Z;
 
-				vertices[tri[2] * 14 + 8] = tangent1.X;
-				vertices[tri[2] * 14 + 9] = tangent1.Y;
+				vertices[tri[2] * 14 + 8]  = tangent1.X;
+				vertices[tri[2] * 14 + 9]  = tangent1.Y;
 				vertices[tri[2] * 14 + 10] = tangent1.Z;
 				vertices[tri[2] * 14 + 11] = bitangent1.X;
 				vertices[tri[2] * 14 + 12] = bitangent1.Y;
 				vertices[tri[2] * 14 + 13] = bitangent1.Z;
 
 			}
+		}
+	}
+
+	public class MirageFrameBuffer
+	{
+		public readonly int Width;
+		public readonly int Height;
+
+		public int FrameBufferObject;
+		public int[] RenderBufferObject;
+		public int[] TextureHandle;
+
+		public MirageFrameBuffer(int w, int h)
+		{
+			Width = w;
+			Height = h;
+		}
+
+		public void BindBuffer(PixelInternalFormat internalFormat, PixelFormat pixelFormat, PixelType pixelType, FramebufferAttachment fbAttachment)
+		{
+			RenderBufferObject = new int[1];
+			TextureHandle = new int[1];
+
+			// generate framebuffer
+			FrameBufferObject = GL.GenFramebuffer();
+			GL.BindFramebuffer(FramebufferTarget.Framebuffer, FrameBufferObject);
+
+			// generate texture
+			char[] data = new char[4 * Width * Height * sizeof(char)];
+			for (int i = 0; i < data.Length; i++)
+			{
+				data[i] = (char)0;
+			}
+			TextureHandle[0] = GL.GenTexture();
+			GL.BindTexture(TextureTarget.Texture2D, TextureHandle[0]);
+			GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, Width, Height, 0, pixelFormat, pixelType, data);
+			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+			GL.BindTexture(TextureTarget.Texture2D, 0);
+
+			// generate RBO
+			RenderBufferObject[0] = GL.GenRenderbuffer();
+			GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, RenderBufferObject[0]);
+			GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, OpenTK.Graphics.OpenGL4.RenderbufferStorage.Depth24Stencil8, Width, Height);
+
+			// attach framebuffer
+			GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, fbAttachment, TextureTarget.Texture2D, TextureHandle[0], 0);
+			GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, RenderBufferObject[0]);
+
+			// check if complete
+			if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferErrorCode.FramebufferComplete)
+			{
+				Console.WriteLine("Framebuffer is not complete!");
+			}
+			GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+		}
+
+		public void BindBuffers(PixelInternalFormat internalFormat, PixelFormat pixelFormat, PixelType pixelType, FramebufferAttachment fbAttachment, int n)
+		{
+			RenderBufferObject = new int[n];
+			TextureHandle = new int[n];
+
+			// generate framebuffer
+			FrameBufferObject = GL.GenFramebuffer();
+			GL.BindFramebuffer(FramebufferTarget.Framebuffer, FrameBufferObject);
+
+			// generate texture
+			char[] data = new char[4 * Width * Height * sizeof(char)];
+			for (int i = 0; i < data.Length; i++)
+			{
+				data[i] = (char)0;
+			}
+
+			for (int i = 0; i < n; i++)
+			{
+				TextureHandle[i] = GL.GenTexture();
+				GL.BindTexture(TextureTarget.Texture2D, TextureHandle[i]);
+				GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, Width, Height, 0, pixelFormat, pixelType, data);
+				GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+				GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+				GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+				GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+				GL.BindTexture(TextureTarget.Texture2D, 0);
+
+				// generate RBO
+				RenderBufferObject[i] = GL.GenRenderbuffer();
+				GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, RenderBufferObject[i]);
+				GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, OpenTK.Graphics.OpenGL4.RenderbufferStorage.Depth24Stencil8, Width, Height);
+
+				// attach framebuffer
+				GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, fbAttachment, TextureTarget.Texture2D, TextureHandle[i], 0);
+				GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, RenderBufferObject[i]);
+			}
+			// check if complete
+			if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferErrorCode.FramebufferComplete)
+			{
+				Console.WriteLine("Framebuffer is not complete!");
+			}
+			GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+		}
+
+		public void Use()
+		{
+			GL.BindFramebuffer(FramebufferTarget.Framebuffer, FrameBufferObject);
+		}
+
+		public void Dispose()
+		{
+			GL.DeleteFramebuffer(FrameBufferObject);
+			foreach (var tex in TextureHandle)
+			{
+				GL.DeleteTexture(tex);
+			}
+		}
+	}
+
+	public class MirageScreenQuad
+	{
+		public static readonly float[] verts = new float[6*4] {
+			-1.0f,  1.0f,  0.0f, 1.0f,
+			-1.0f, -1.0f,  0.0f, 0.0f,
+			 1.0f, -1.0f,  1.0f, 0.0f,
+
+			-1.0f,  1.0f,  0.0f, 1.0f,
+			 1.0f, -1.0f,  1.0f, 0.0f,
+			 1.0f,  1.0f,  1.0f, 1.0f
+		};
+
+		int VertexBufferObject;
+		int VertexArrayObject;
+
+		public MirageScreenQuad() 
+		{
+			GenVBO();
+			GenVAO();
+		}
+
+		public void GenVBO()
+		{
+			VertexBufferObject = GL.GenBuffer();
+			GL.BindBuffer(BufferTarget.ArrayBuffer, VertexBufferObject);
+			GL.BufferData(BufferTarget.ArrayBuffer, verts.Length * sizeof(float), verts, BufferUsageHint.StreamDraw);
+		}
+
+		public void GenVAO()
+		{
+			VertexArrayObject = GL.GenVertexArray();
+			GL.BindVertexArray(VertexArrayObject);
+			// position
+			GL.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), 0);
+			GL.EnableVertexAttribArray(0);
+			// uv
+			GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), 2 * sizeof(float));
+			GL.EnableVertexAttribArray(1);
+		}
+
+		public void Draw()
+		{
+			GL.BindVertexArray(VertexArrayObject);
+			GL.DrawArrays(PrimitiveType.Triangles, 0, 6);
 		}
 	}
 
@@ -362,7 +525,6 @@ namespace MirageDev.Mirage
 				e.shader.SetInt("actualSpotLightLen", s);
 				e.Render();
 			}
-			renderer.SwapBuffers();
 		}
 
 		public void SetMVP(Matrix4 view, Matrix4 projection)
