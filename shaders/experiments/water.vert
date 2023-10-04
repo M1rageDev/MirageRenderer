@@ -9,7 +9,6 @@ out vec2 TexCoord;
 out vec3 Normal;
 out vec3 FragPos;
 out vec4 ProjectPos;
-out mat3 TBN;
 
 uniform mat4 view;
 uniform mat4 projection;
@@ -26,11 +25,4 @@ void main()
     Normal = aNormal;
     FragPos = (vec4(finalPosition, 1f) * transform).xyz;
     TexCoord = aTexCoord;
-
-    vec3 T = normalize(vec3(transform * vec4(aTangent, 0.0)));
-    vec3 N = normalize(vec3(transform * vec4(aNormal, 0.0)));
-    T = normalize(T - dot(T, N) * N);
-    vec3 B = cross(N, T);
-    
-    TBN = mat3(T, B, N);
 }

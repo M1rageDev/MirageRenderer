@@ -16,6 +16,7 @@ out vec4 FragColor;
 
 uniform vec3 viewPos;
 uniform sampler2D tex;
+uniform sampler2D depthTex;
 uniform DirectionalLight directionalLight;
 uniform float time;
 
@@ -36,8 +37,8 @@ void main()
     vec3 halfwayDir = normalize(lightDir + viewDir);
     vec4 spec = pow(max(dot(norm, halfwayDir), 0.0), 2048) * vec4(directionalLight.specular, 1f);
 
-    float depth = linearize_depth(ProjectPos.z, 0.1, 1000);
+    float depth = texture(depthTex, vec2(gl_FragCoord.x / 800.0, gl_FragCoord.y / 600.0)).x;
 
     vec4 lightAmount = vec4(texture2D(tex, TexCoord * 100f + time * 0.1f).xyz, 0.7) * (diff) + spec;
-    FragColor = vec4(vec3(depth), 1);
+    FragColor = vec4(vec3(1.0 - depth), 1);
 }

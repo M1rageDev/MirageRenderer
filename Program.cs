@@ -121,16 +121,16 @@ namespace MirageDev.Mirage
 			worldShader.SetInt("sandTex", 0);
 			worldShader.SetInt("grassTex", 1);
 			worldObject = new(worldMesh, worldShader);
+			worldObject.textures = new Texture[2] { sandTex, grassTex };
 
 			// Load water
 			Shader waterShader = new("../../../shaders/experiments/water.vert", "../../../shaders/experiments/water.frag");
-			waterShader.SetInt("tex", 2);
-			waterShader.SetInt("normalTex", 3);
-			waterShader.SetFloat("shininess", 512f);
+			waterShader.SetInt("tex", 0);
+			waterShader.SetInt("depthTex", 3);
 			waterObject = new(new ObjLoader("../../../models/Plane.obj"), waterShader);
+			waterObject.textures = new Texture[1] { waterTex };
 			waterObject.scale = new(32f, 1f, 32f);
 			waterObject.position = new(32f, 0f, 32f);
-			waterObject.mesh.RecalculateTangents();
 
 			// Load sun
 			Shader sunShader = new("../../../shaders/shader.vert", "../../../shaders/unlit/solidColor.frag");
@@ -170,25 +170,19 @@ namespace MirageDev.Mirage
 
 		void FrameRender(MirageRenderer renderer)
 		{
-			sandTex.Use(TextureUnit.Texture0);
-			grassTex.Use(TextureUnit.Texture1);
-			waterTex.Use(TextureUnit.Texture2);
-
-			// first pass (color)
+			// first pass (color/depth)
 			GL.Enable(EnableCap.DepthTest);
-			GL.BindFramebuffer(FramebufferTarget.Framebuffer, screenFB.FrameBufferObject);
+			screenFB.Use();
 			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+			screenFB.UseDepthTexture(TextureUnit.Texture3);
 			scene.Render(renderer);
 
-			// second pass (depth)
-
-
-			// third pass (screen quad)
+			// second pass (screen quad)
 			GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 			GL.Disable(EnableCap.DepthTest);
 			GL.Clear(ClearBufferMask.ColorBufferBit);
-			GL.ActiveTexture(TextureUnit.Texture0);
-			GL.BindTexture(TextureTarget.Texture2D, screenFB.TextureHandle[0]);
+			screenFB.UseTexture(TextureUnit.Texture0);
+			
 			screenShader.Use();
 			screenQuad.Draw();
 

@@ -200,8 +200,8 @@ namespace MirageDev.Mirage
 		public readonly int Height;
 
 		public int FrameBufferObject;
-		public int[] RenderBufferObject;
-		public int[] TextureHandle;
+		public int TextureHandle;
+		public int DepthStencilHandle;
 
 		public MirageFrameBuffer(int w, int h)
 		{
@@ -211,9 +211,6 @@ namespace MirageDev.Mirage
 
 		public void BindBuffer(PixelInternalFormat internalFormat, PixelFormat pixelFormat, PixelType pixelType, FramebufferAttachment fbAttachment)
 		{
-			RenderBufferObject = new int[1];
-			TextureHandle = new int[1];
-
 			// generate framebuffer
 			FrameBufferObject = GL.GenFramebuffer();
 			GL.BindFramebuffer(FramebufferTarget.Framebuffer, FrameBufferObject);
@@ -224,8 +221,8 @@ namespace MirageDev.Mirage
 			{
 				data[i] = (char)0;
 			}
-			TextureHandle[0] = GL.GenTexture();
-			GL.BindTexture(TextureTarget.Texture2D, TextureHandle[0]);
+			TextureHandle = GL.GenTexture();
+			GL.BindTexture(TextureTarget.Texture2D, TextureHandle);
 			GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, Width, Height, 0, pixelFormat, pixelType, data);
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
@@ -233,63 +230,26 @@ namespace MirageDev.Mirage
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
 			GL.BindTexture(TextureTarget.Texture2D, 0);
 
-			// generate RBO
-			RenderBufferObject[0] = GL.GenRenderbuffer();
-			GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, RenderBufferObject[0]);
-			GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, OpenTK.Graphics.OpenGL4.RenderbufferStorage.Depth24Stencil8, Width, Height);
+			// generate depth/stencil texture
+			DepthStencilHandle = GL.GenTexture();
+			GL.BindTexture(TextureTarget.Texture2D, DepthStencilHandle);
+			GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.DepthComponent, Width, Height, 0, PixelFormat.DepthComponent, PixelType.Float, data);
+			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+			GL.BindTexture(TextureTarget.Texture2D, 0);
 
 			// attach framebuffer
-			GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, fbAttachment, TextureTarget.Texture2D, TextureHandle[0], 0);
-			GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, RenderBufferObject[0]);
+			GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, fbAttachment, TextureTarget.Texture2D, TextureHandle, 0);
+			GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2D, DepthStencilHandle, 0);
 
 			// check if complete
 			if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferErrorCode.FramebufferComplete)
 			{
 				Console.WriteLine("Framebuffer is not complete!");
-			}
-			GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-		}
-
-		public void BindBuffers(PixelInternalFormat internalFormat, PixelFormat pixelFormat, PixelType pixelType, FramebufferAttachment fbAttachment, int n)
-		{
-			RenderBufferObject = new int[n];
-			TextureHandle = new int[n];
-
-			// generate framebuffer
-			FrameBufferObject = GL.GenFramebuffer();
-			GL.BindFramebuffer(FramebufferTarget.Framebuffer, FrameBufferObject);
-
-			// generate texture
-			char[] data = new char[4 * Width * Height * sizeof(char)];
-			for (int i = 0; i < data.Length; i++)
-			{
-				data[i] = (char)0;
-			}
-
-			for (int i = 0; i < n; i++)
-			{
-				TextureHandle[i] = GL.GenTexture();
-				GL.BindTexture(TextureTarget.Texture2D, TextureHandle[i]);
-				GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, Width, Height, 0, pixelFormat, pixelType, data);
-				GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-				GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-				GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-				GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-				GL.BindTexture(TextureTarget.Texture2D, 0);
-
-				// generate RBO
-				RenderBufferObject[i] = GL.GenRenderbuffer();
-				GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, RenderBufferObject[i]);
-				GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, OpenTK.Graphics.OpenGL4.RenderbufferStorage.Depth24Stencil8, Width, Height);
-
-				// attach framebuffer
-				GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, fbAttachment, TextureTarget.Texture2D, TextureHandle[i], 0);
-				GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, RenderBufferObject[i]);
-			}
-			// check if complete
-			if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferErrorCode.FramebufferComplete)
-			{
-				Console.WriteLine("Framebuffer is not complete!");
+				Console.WriteLine(GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer));
+				Console.WriteLine(GL.GetError());
 			}
 			GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 		}
@@ -299,13 +259,22 @@ namespace MirageDev.Mirage
 			GL.BindFramebuffer(FramebufferTarget.Framebuffer, FrameBufferObject);
 		}
 
+		public void UseTexture(TextureUnit unit)
+		{
+			GL.ActiveTexture(unit);
+			GL.BindTexture(TextureTarget.Texture2D, TextureHandle);
+		}
+
+		public void UseDepthTexture(TextureUnit unit)
+		{
+			GL.ActiveTexture(unit);
+			GL.BindTexture(TextureTarget.Texture2D, DepthStencilHandle);
+		}
+
 		public void Dispose()
 		{
 			GL.DeleteFramebuffer(FrameBufferObject);
-			foreach (var tex in TextureHandle)
-			{
-				GL.DeleteTexture(tex);
-			}
+			GL.DeleteTexture(TextureHandle);
 		}
 	}
 
@@ -360,8 +329,7 @@ namespace MirageDev.Mirage
 	{
 		public Mesh mesh;
 		public Shader shader;
-		public Texture texture0;
-		public Texture texture1;
+		public Texture[] textures;
 		public Material material;
 
 		public Vector3 position = new(0f, 0f, 0f);
@@ -374,11 +342,11 @@ namespace MirageDev.Mirage
 
 		public MirageObject() { }
 
-		public MirageObject(ObjLoader mesh, Shader shader, Texture texture, Material material)
+		public MirageObject(ObjLoader mesh, Shader shader, Texture[] textures, Material material)
 		{
 			this.mesh = mesh.mesh;
 			this.shader = shader;
-			texture0 = texture;
+			this.textures = textures;
 			this.material = material;
 			material.Assign(this.shader);
 
@@ -386,11 +354,11 @@ namespace MirageDev.Mirage
 			shader.Use();
 		}
 
-		public MirageObject(Mesh mesh, Shader shader, Texture texture, Material material)
+		public MirageObject(Mesh mesh, Shader shader, Texture[] textures, Material material)
 		{
 			this.mesh = mesh;
 			this.shader = shader;
-			texture0 = texture;
+			this.textures = textures;
 			this.material = material;
 			material.Assign(this.shader);
 
@@ -402,6 +370,7 @@ namespace MirageDev.Mirage
 		{
 			this.mesh = mesh.mesh;
 			this.shader = shader;
+			this.textures = new Texture[0];
 
 			GenBuffers();
 			shader.Use();
@@ -469,7 +438,12 @@ namespace MirageDev.Mirage
 
 		public void Render()
 		{
-			texture0?.Use();
+			int texI = 0;
+			foreach (var tex in textures)
+			{
+				tex.Use(TextureUnit.Texture0 + texI);
+				texI++;
+			}
 			shader.Use();
 
 			GL.BindVertexArray(VertexArrayObject);
