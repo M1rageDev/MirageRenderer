@@ -89,6 +89,36 @@ namespace MirageDev.Mirage
 			GL.UniformMatrix4(location, true, ref value);
 		}
 
+		public void SetArray(string name, float[] value)
+		{
+			GL.UseProgram(Handle);
+			for (int i = 0; i < value.Length; i++)
+			{
+				int location = GL.GetUniformLocation(Handle, name + "[" + i.ToString() + "]");
+				GL.Uniform1(location, value[i]);
+			}
+		}
+
+		public void SetArray(string name, Vector3[] value)
+		{
+			GL.UseProgram(Handle);
+			for (int i = 0; i < value.Length; i++)
+			{
+				int location = GL.GetUniformLocation(Handle, name + "[" + i.ToString() + "]");
+				GL.Uniform3(location, value[i]);
+			}
+		}
+
+		public void SetArray(string name, Vector4[] value)
+		{
+			GL.UseProgram(Handle);
+			for (int i = 0; i < value.Length; i++)
+			{
+				int location = GL.GetUniformLocation(Handle, name + "[" + i.ToString() + "]");
+				GL.Uniform4(location, value[i]);
+			}
+		}
+
 		private bool disposedValue = false;
 
 		protected virtual void Dispose(bool disposing)

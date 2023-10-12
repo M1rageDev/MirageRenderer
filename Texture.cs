@@ -10,7 +10,7 @@ namespace MirageDev.Mirage
 	{
 		public int Handle;
 
-		public Texture(Color4 color, int w, int h)
+		public Texture(Color4 color, int w, int h, PixelInternalFormat internalFormat=PixelInternalFormat.Rgba, PixelFormat format=PixelFormat.Rgba, PixelType pType=PixelType.UnsignedByte)
 		{
 			Handle = GL.GenTexture();
 			Use();
@@ -21,7 +21,7 @@ namespace MirageDev.Mirage
 			{
 				data[i] = colorChar[i % 4];
 			}
-			GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, w, h, 0, PixelFormat.Rgba, PixelType.UnsignedByte, data);
+			GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, w, h, 0, format, pType, data);
 			GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
 		}
 

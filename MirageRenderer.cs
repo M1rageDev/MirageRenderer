@@ -118,7 +118,7 @@ namespace MirageDev.Mirage
 			return Vector3.Cross(a, b);
 		}
 
-		public void RecalculateNormals()
+		public void RecalculateNormals(bool inverted=false)
 		{
 			// calculate normals
 			foreach (var tri in m_Triangles)
@@ -128,6 +128,7 @@ namespace MirageDev.Mirage
 				Vector3 C = m_Vertices[tri[2]];
 
 				Vector3 normal = ComputeFaceNormal(A, B, C).Normalized();
+				if (inverted) normal *= -1;
 				vertices[tri[0] * 14 + 5] = normal.X;
 				vertices[tri[0] * 14 + 6] = normal.Y;
 				vertices[tri[0] * 14 + 7] = normal.Z;
@@ -200,8 +201,8 @@ namespace MirageDev.Mirage
 		public readonly int Height;
 
 		public int FrameBufferObject;
-		public int TextureHandle;
 		public int DepthStencilHandle;
+		public int TextureHandle;
 
 		public MirageFrameBuffer(int w, int h)
 		{
@@ -216,14 +217,9 @@ namespace MirageDev.Mirage
 			GL.BindFramebuffer(FramebufferTarget.Framebuffer, FrameBufferObject);
 
 			// generate texture
-			char[] data = new char[4 * Width * Height * sizeof(char)];
-			for (int i = 0; i < data.Length; i++)
-			{
-				data[i] = (char)0;
-			}
 			TextureHandle = GL.GenTexture();
 			GL.BindTexture(TextureTarget.Texture2D, TextureHandle);
-			GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, Width, Height, 0, pixelFormat, pixelType, data);
+			GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, Width, Height, 0, pixelFormat, pixelType, (IntPtr)null);
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
@@ -233,7 +229,7 @@ namespace MirageDev.Mirage
 			// generate depth/stencil texture
 			DepthStencilHandle = GL.GenTexture();
 			GL.BindTexture(TextureTarget.Texture2D, DepthStencilHandle);
-			GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.DepthComponent, Width, Height, 0, PixelFormat.DepthComponent, PixelType.Float, data);
+			GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.DepthComponent, Width, Height, 0, PixelFormat.DepthComponent, PixelType.Float, (IntPtr)null);
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
@@ -257,6 +253,11 @@ namespace MirageDev.Mirage
 		public void Use()
 		{
 			GL.BindFramebuffer(FramebufferTarget.Framebuffer, FrameBufferObject);
+		}
+
+		public void Unbind()
+		{
+			GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 		}
 
 		public void UseTexture(TextureUnit unit)
@@ -329,8 +330,10 @@ namespace MirageDev.Mirage
 	{
 		public Mesh mesh;
 		public Shader shader;
-		public Texture[] textures;
+		public Texture[] textures = new Texture[0];
 		public Material material;
+
+		public Action<MirageObject> onRenderAction;
 
 		public Vector3 position = new(0f, 0f, 0f);
 		public Vector3 scale = new(1f,1f, 1f);
@@ -438,6 +441,11 @@ namespace MirageDev.Mirage
 
 		public void Render()
 		{
+			if (onRenderAction != null)
+			{
+				onRenderAction(this);
+			}
+
 			int texI = 0;
 			foreach (var tex in textures)
 			{
@@ -552,6 +560,7 @@ namespace MirageDev.Mirage
 			shader.SetVector3("directionalLight.ambient", ambient);
 			shader.SetVector3("directionalLight.diffuse", diffuse);
 			shader.SetVector3("directionalLight.specular", specular);
+			shader.SetVector3("lightDir", direction);
 		}
 	}
 

@@ -8,37 +8,42 @@ struct DirectionalLight {
     vec3 specular;
 };
 
+const float edgeSoftness = 0.6;
+
 in vec3 FragPos;
-in vec3 Normal;
+flat in vec3 Normal;
+flat in vec3 Color;
 in vec2 TexCoord;
-in vec4 ProjectPos;
+in vec3 ViewPos;
+
 out vec4 FragColor;
 
-uniform vec3 viewPos;
 uniform sampler2D tex;
 uniform sampler2D depthTex;
 uniform DirectionalLight directionalLight;
 uniform float time;
 
-float linearize_depth(float d,float zNear,float zFar)
+float linearizeDepth(float d,float near,float far)
 {
-    float z_n = 2.0 * d - 1.0;
-    return 2.0 * zNear * zFar / (zFar + zNear - z_n * (zFar - zNear));
+    return (2.0 * near * far) / (far + near - (d * 2.0 - 1.0) * (far - near));
+}
+
+float waterDepth(vec2 coord) 
+{
+    float depth = texture(depthTex, coord).x;
+    float floorDist = linearizeDepth(depth, 0.1f, 1000.0f);
+    depth = gl_FragCoord.z;
+    float waterDist = linearizeDepth(depth, 0.1f, 1000.0f);
+    return floorDist - waterDist;
 }
 
 void main()
 {
-    vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(-directionalLight.direction); 
-    vec4 diff = max(dot(norm, lightDir), 0.0) * vec4(directionalLight.diffuse, 1f);
+    float depth = waterDepth(gl_FragCoord.xy / vec2(800, 600));
+    depth = clamp(depth / edgeSoftness, 0.0, 1.0);
 
-    // blinn phong
-    vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 halfwayDir = normalize(lightDir + viewDir);
-    vec4 spec = pow(max(dot(norm, halfwayDir), 0.0), 2048) * vec4(directionalLight.specular, 1f);
+    float normalDot = dot(normalize(Normal), vec3(0, 1, 0));
 
-    float depth = texture(depthTex, vec2(gl_FragCoord.x / 800.0, gl_FragCoord.y / 600.0)).x;
-
-    vec4 lightAmount = vec4(texture2D(tex, TexCoord * 100f + time * 0.1f).xyz, 0.7) * (diff) + spec;
-    FragColor = vec4(vec3(1.0 - depth), 1);
+    vec4 lightAmount = vec4(Color - depth * 0.1, 0.8);
+    FragColor = lightAmount;
 }
