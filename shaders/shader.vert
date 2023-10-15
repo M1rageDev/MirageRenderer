@@ -8,6 +8,7 @@ layout (location = 4) in vec3 aBitangent;
 out vec2 TexCoord;
 out vec3 Normal;
 out vec3 FragPos;
+out vec3 ModelPos;
 out mat3 TBN;
 
 uniform mat4 view;
@@ -19,6 +20,7 @@ void main()
     gl_Position = vec4(aPosition, 1f) * transform * view * projection;
     Normal = aNormal * mat3(transpose(inverse(transform)));
     FragPos = (vec4(aPosition, 1f) * transform).xyz;
+    ModelPos = aPosition;
     TexCoord = aTexCoord;
 
     vec3 T = normalize(vec3(transform * vec4(aTangent, 0.0)));

@@ -27,9 +27,9 @@ namespace MirageDev.Mirage
 		MirageObject[] trees;
 		Scene scene = new();
 
-		int Xsize = 128;
+		int Xsize = 512;
 		float Ymult = 7;
-		int Zsize = 128;
+		int Zsize = 512;
 		float resolution = 0.5f;
 		double perlinFrequency = 50;
 		double flatFrequency = 200;
@@ -37,8 +37,8 @@ namespace MirageDev.Mirage
 		int perlinOctaves = 4;
 		Perlin perlin = new();
 
-		int waterXsize = 256;
-		int waterZsize = 256;
+		int waterXsize = 1024;
+		int waterZsize = 1024;
 		float waterResolution = 0.25f;
 
 		float[,] heightMap;
@@ -153,10 +153,11 @@ namespace MirageDev.Mirage
 						// place tree
 						Shader treeShader = new("../../../shaders/shader.vert", "../../../shaders/lit/textured.frag");
 						treeShader.SetInt("tex", 0);
-						treeShader.SetVector3("color", new(0.1f, 1f, 0.1f));
-						MirageObject tree = new(new ObjLoader("../../../models/tree.obj"), treeShader);
+						MirageObject tree = new(new ObjLoader("../../../models/treeNew.obj"), treeShader);
+						tree.mesh.RecalculateNormals(true);
 						tree.position = new(z*2, heightMap[z*4, x*4], x*2);
-						tree.textures = new Texture[1] { new("../../../textures/tree.png") };
+						tree.scale = new(0.75f);
+						tree.textures = new Texture[1] { new("../../../textures/texture_gradient.png") };
 						treeList.Add(tree);
 					}
 				}
@@ -240,7 +241,7 @@ namespace MirageDev.Mirage
 		{
 			KeyboardState input = renderer.KeyboardState;
 
-			float t = (float)timer.Elapsed.TotalSeconds;
+			float t = (float)timer.Elapsed.TotalSeconds * 0.5f;
 
 			view = renderer.camera.CreateViewMatrix();
 			waterObject.shader.SetFloat("time", t);

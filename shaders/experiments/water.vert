@@ -5,7 +5,10 @@ layout (location = 2) in vec3 aNormal;
 layout (location = 3) in vec3 aTangent;
 layout (location = 4) in vec3 aBitangent;
 
-const float PI = 3.1415926535897932384626433832795;
+const float TwoPI = 3.1415926535897932384626433832795 * 2.0;
+const float wave = 0.03;
+const float amplitude = 0.02;
+const float epsilon = 0.001;
 
 out vec2 TexCoord;
 out vec3 FragPos;
@@ -50,18 +53,14 @@ float noise(vec3 p){
     return o4.y * d.y + o4.x * (1.0 - d.y);
 }
 
-float genWave(float x, float z, float wave, float amplitude) 
+vec3 applyWaves(vec3 vert, float distortion)
 {
-    float radX = (x / wave + time * 0.5) * 2.0 * PI;
-    float radZ = (z / wave + time * 0.5) * 2.0 * PI;
-
-    return amplitude * 0.5 * (sin(radX) + cos(radZ));
+    return vert + vec3(0.0, distortion, 0.0);
 }
 
-vec3 applyWaves(vec3 vert, float wave, float amplitude)
+vec3 applyNormal(float distortion)
 {
-    float distortion = genWave(vert.x, vert.z, wave, amplitude);
-    return vert + vec3(0.0, distortion, 0.0);
+    return normalize(vec3(distortion, 1.0, distortion));
 }
 
 float calculateSpec(vec3 viewPos, vec3 lightDir, vec3 norm)
@@ -78,11 +77,17 @@ float calculateDiff(vec3 lightDir, vec3 norm)
 
 void main()
 {
-    vec3 finalPosition = applyWaves(aPosition, 0.03, 0.04);
+    float noiseF = noise(vec3(aPosition.x, 0, aPosition.z)) * 0.1;
+
+    float radX = (aPosition.x / wave + time) * TwoPI;
+    float radZ = (aPosition.z / wave + time) * TwoPI;
+    float distortion = amplitude * (sin(radX) + cos(radZ)) - noiseF;
+
+    Normal = aNormal;
+    vec3 finalPosition = applyWaves(aPosition, distortion);
     vec4 projected = vec4(finalPosition, 1f) * transform * view * projection;
 
     gl_Position = projected;
-    Normal = aNormal;
     FragPos = (vec4(finalPosition, 1f) * transform).xyz;
     TexCoord = aTexCoord;
     ViewPos = viewPos;

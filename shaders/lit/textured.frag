@@ -22,6 +22,6 @@ void main()
     vec3 lightDir = normalize(-directionalLight.direction); 
     vec3 diff = max(dot(norm, lightDir), 0.0) * directionalLight.diffuse;
 
-    vec3 lightAmount = texture(tex, TexCoord).rgb * diff;
+    vec3 lightAmount = texture(tex, TexCoord).rgb * (directionalLight.ambient + diff);
     FragColor = vec4(lightAmount, 1f);
 }

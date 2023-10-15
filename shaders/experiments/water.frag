@@ -21,7 +21,6 @@ out vec4 FragColor;
 uniform sampler2D tex;
 uniform sampler2D depthTex;
 uniform DirectionalLight directionalLight;
-uniform float time;
 
 float linearizeDepth(float d,float near,float far)
 {
